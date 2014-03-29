@@ -11,6 +11,37 @@ pv drivers? modify the guest?
 
 #####[x]where to trigger the evtchn of pIRQ?#####
 #####[x] trap, event, interrupt?#####
+During startup the guest OS installs two handlers (event and failsafe)
+via the *HYPERVISOR\_set\_callbacks* hypercall:  
+1. The *event\_callback* is the handler to be called to notify an event to
+the guest OS  
+2. The *failsafe\_callback* is used when a fault occurs when using the
+event callback  
+3. The guest OS can install a handler for a physical IRQ through the
+*HYPERVISOR\_event\_channel\_op* hypercall, specifying as operation
+*EVTCHNOP\_bind\_pirq*.  
+
+
+When an interrupt occurs control passes to the Xen
+common_interrupt routine, that calls the Xen do_IRQ function.  
+*do\_IRQ*  
+Checks who has the responsibility to handle the interrupt:
+The VMM: the interrupt is handled internally by the VMM
+One ore more guest OS: it calls __do_IRQ_guest function  
+*\_\_do\_IRQ\_guest*:  
+For each domain that has a binding to the IRQ sets to 1 the pending
+flag of the event channel via send_guest_pirq
+
+The entry point in Linux is the hypervisor\_callback function (is
+the event callback handler installed at startup), that calls 
+evtchn\_do\_upcall.    
+*evtchn_do_upcall*:  
+1. Checks for pending events  
+2. Resets to zero the pending flag  
+3. Uses the evtchn_to_irq array to identify the IRQ binding for
+the event channel  
+4. Calls Linux do_IRQ interrupt handler function
+
 
 #####[x] the meaning of "to bind"  #####
 * Connecting the endpoints of a channel to a port 
@@ -55,13 +86,28 @@ Windows PV drivers currently have to multiplex all event channel processing onto
 
 1. 
 
+	
+#####GSI IRQ VECTOR
+Xen get mp_irqs[] from MADT,   the mp_irqs[]  struct is as below
+<!--lang:c++-->
+	struct mpc_config_intsrc
+	{
+		unsigned char mpc_type;
+		unsigned char mpc_irqtype;
+		unsigned short mpc_irqflag;
+		unsigned char mpc_srcbus;  #SOURCE BUS ID
+		unsigned char mpc_srcbusirq;   # SOURCE BUS IRQ
+		unsigned char mpc_dstapic;
+		unsigned char mpc_dstirq;    #destination IOAPIC INTN
+	};
 
-
-
-
-
-
-
+ 
+Can I get the conclusion as blow:  
+1. the mp_irqs[]  acts as a map between IRQ and IOAPIC PIN, and we can get  GSI from mpc_config_intsrc.mpc_dstirq  (GSI=GSI base + pin).   
+2. For PCI IRQs, the IRQ equal to the GSI.  
+3. But for ISA IRQs, the two maybe not match, because of the ISO(interrupt source overrides).  
+4. And the map between IRQ and GSI  is decided by hardware, not by xen.Because the map info was get from MADT.  
+5. ps :  another question, can I rename "apic_pin_2_gsi_irq"  with  "apic_pin_2_gsi" for they are the same semantics.  ???
 
 
 
