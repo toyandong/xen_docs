@@ -1,7 +1,7 @@
 TODO List
 =============
 
-#####[x]vIRQ vs pIRQ?#####
+####[x]vIRQ vs pIRQ?####
 <!--lang:c++-->
 	/*
 	 * EVTCHNOP_bind_virq: Bind a local event channel to VIRQ <irq> on specified
@@ -39,14 +39,14 @@ TODO List
 	    evtchn_port_t port;
 	};
 
-#####[x]Is bsp of SMP VCPU0? #####
+####[x]Is bsp of SMP VCPU0? ####
 
-#####[x]Where to bind evtchn to pIRQ?#####
+####[x]Where to bind evtchn to pIRQ?####
 
 pv drivers? modify the guest?
 
-#####[x]where to trigger the evtchn of pIRQ?#####
-#####[x] trap, event, interrupt?#####
+####[x]where to trigger the evtchn of pIRQ?####
+####[x] trap, event, interrupt?####
 During startup the guest OS installs two handlers (event and failsafe)
 via the *HYPERVISOR\_set\_callbacks* hypercall:  
 1. The *event\_callback* is the handler to be called to notify an event to
@@ -77,16 +77,16 @@ evtchn\_do\_upcall.
 3. Uses the evtchn_to_irq array to identify the IRQ binding for
 the event channel  
 4. Calls Linux do_IRQ interrupt handler function
-#####what is callback() ?#####
+####what is callback() ?####
 the function in guest to handle the irq;
 
 
-#####[x] the meaning of "to bind"  #####
+####[x] the meaning of "to bind"  ####
 * Connecting the endpoints of a channel to a port 
 * Assigning a VCPU for receiving events on a given channel  
 * Setting the handler for a specified event  
  
-#####[x]"PVHVM"  vs "PV-on-HVM" ?  #####
+####[x]"PVHVM"  vs "PV-on-HVM" ?  ####
 (“PVHVM” mode should not be confused with “PV-on-HVM” mode, which is a term sometimes used in the past for “fully virtualized with PV drivers”.) 
  
 http://wiki.xen.org/wiki/Virtualization_Spectrum#Paravirtualizing_little_by_little:_PVHVM_mode   
@@ -94,17 +94,15 @@ http://wiki.xen.org/wiki/Xen_Linux_PV_on_HVM_drivers
 http://www.rackspace.com/knowledge_center/article/choosing-a-virtualization-mode-pv-versus-pvhvm  
 http://wiki.xen.org/wiki/PV_on_HVM  
 
-#####About the implementation  #####
-1.  Where to implement the map? In the function of bind(). But which bind(), there are a lot bind();   Maybe I shoud init map during creating a domain.
-2.  How to implement a new mechanism to replace the hvm_set_callback_irq_level? And what's the old mechanism?
 
-#####PVonHVM extensions bypass the emulated APICs for issuing events to guests.######
+
+####PVonHVM extensions bypass the emulated APICs for issuing events to guests.#####
 what does this mean?there are two means to handle interrupt:  
 1. hardware --> xen --> evtchn --> APIC --> VM  
 2. hardware --> xen -->evtchn --> VM
 
 
-#####what does this exactly mean? #####
+####what does this exactly mean? ####
 Windows PV drivers currently have to multiplex all event channel processing onto a single interrupt which is registered with Xen using the *HVM\_PARAM\_CALLBACK\_IRQ* parameter.  
 
 <!--lang:c++-->
@@ -126,7 +124,7 @@ Windows PV drivers currently have to multiplex all event channel processing onto
 1. N:1?
 
 	
-#####GSI IRQ VECTOR#####
+####GSI IRQ VECTOR####
 Xen get mp_irqs[] from MADT,   the mp_irqs[]  struct is as below
 <!--lang:c++-->
 	struct mpc_config_intsrc
@@ -148,8 +146,16 @@ Can I get the conclusion as blow:
 4. And the map between IRQ and GSI  is decided by hardware, not by xen.Because the map info was get from MADT.  
 5. ps :  another question, can I rename "apic_pin_2_gsi_irq"  with  "apic_pin_2_gsi" for they are the same semantics.  ???
 
+<!--lang:c-->
+	     /*
+	445          * A PV guest has no concept of a GSI (since it has no ACPI
+	446          * nor access to/knowledge of the physical APICs). Therefore
+	447          * all IRQs are dynamically allocated from the entire IRQ
+	448          * space.
+	449          */
 
-######what is regs->entry_vector and error_code ?#####
+
+#####what is regs->entry_vector and error_code ?####
 <!--lang:c-->
 	void do_IRQ(struct cpu_user_regs *regs)
 	{
@@ -191,7 +197,7 @@ entry_vector:  is it the interrupt vector which is coming?
 	    uint16_t gs, _pad6[3]; /* Non-zero => takes precedence over gs_base_usr. */
 	};
 
-#####two   evtchn\_to\_irq?#####
+####two   evtchn\_to\_irq?####
 
 one in guest, one in xen?
 <!--lang:c-->
@@ -224,7 +230,7 @@ one in guest, one in xen?
 	1721         }
 	1722 }
 
-#####xen\_callback\_vector is for PVHVM to bypass PCI otr APIC#####
+####xen\_callback\_vector is for PVHVM to bypass PCI otr APIC####
 <!--lang:c-->
 	1667 #ifdef CONFIG_XEN_PVHVM
 	1668 /* Vector callbacks are better than PCI interrupts to receive event
@@ -268,6 +274,46 @@ one in guest, one in xen?
         struct { uint8_t dev, intx; } pci;
         uint32_t vector;
     } callback_via;
+	
+	
+	 76 /*
+	 77  * Packed IRQ information:
+	 78  * type - enum xen_irq_type
+	 79  * event channel - irq->event channel mapping
+	 80  * cpu - cpu this event channel is bound to
+	 81  * index - type-specific information:
+	 82  *    PIRQ - vector, with MSB being "needs EIO", or physical IRQ of the HVM
+	 83  *           guest, or GSI (real passthrough IRQ) of the device.
+	 84  *    VIRQ - virq number
+	 85  *    IPI - IPI vector
+	 86  *    EVTCHN -
+	 87  */
+	 88 struct irq_info {
+	 89         struct list_head list;
+	 90         enum xen_irq_type type; /* type */
+	 91         unsigned irq;
+	 92         unsigned short evtchn;  /* event channel */
+	 93         unsigned short cpu;     /* cpu bound */
+	 94 
+	 95         union {
+	 96                 unsigned short virq;
+	 97                 enum ipi_vector ipi;
+	 98                 struct {
+	 99                         unsigned short pirq;
+	100                         unsigned short gsi;
+	101                         unsigned char vector;
+	102                         unsigned char flags;
+	103                         uint16_t domid;
+	104                 } pirq;
+	105         } u;
+	106 };
+
+About the implementation
+============
+1.  Where to implement the map? In the function of bind(). But which bind(), there are a lot bind();   Maybe I shoud init map during creating a domain.
+2.  can it solve the "multiple VIFs" problem?
+3.  How to implement a new mechanism to replace the hvm_set_callback_irq_level? And what's the old mechanism?
+
 
 Code Annotation 
 ============
