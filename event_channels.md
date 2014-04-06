@@ -308,6 +308,10 @@ one in guest, one in xen?
 	105         } u;
 	106 };
 
+
+
+####vectors are bound to pin of IOAPIC, not LAPIC####
+
 About the implementation
 ============
 1.  Where to implement the map? In the function of bind(). But which bind(), there are a lot bind();   Maybe I shoud init map during creating a domain.
