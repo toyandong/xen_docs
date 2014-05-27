@@ -66,7 +66,7 @@ In xen,
 	}
 
 ####[?]How APIC work with evtchn ?
-
+it  has nothing to do with evtchn
 ####[?]How does the windows PV driver work[]?
 
 
