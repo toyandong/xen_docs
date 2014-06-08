@@ -41,9 +41,24 @@ add some extra field. bind a particular event channel to a particular cpu and ve
 	#endif
 	};
 
-####[] struct evtchn. notify_vcpu_id?
+Maybe I should add 
+  
+    int bind_vcpu;  
+	int bind_vector;
+
+what does notify\_vcpu\_id means? work as bind_vcpu?
+####[x]About the vecotr
+In HVM mechanism,  
+	
+	vecotr=vlapic_has_pending_irq(v) // irr of vLapic, v=current
+In my mechanism, the vector is in evtchn structure.
+
+In PIC, IRR is IR0~IR7  
+In LAPIC, IRR is FEE00200H ~ FEE00270H
+
+####[] struct evtchn. notify\_vcpu\_id?
 what does that mean?
-####[]modify hvm\_assert\_evtchn_irq()
+####[]modify hvm\_assert\_evtchn\_irq()
 ####[] how to test?
 
 
